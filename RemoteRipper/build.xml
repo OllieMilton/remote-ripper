@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="JTunes" basedir="." default="jar">
+
+	<property name="build" value="build"/>
+	<property name="lib.dir" value="lib"/>
+	<ivy:cachepath pathid="default.classpath" />
+	<ivy:settings file="../ivy_settings/ivysettings.xml" />
+	
+	<target name="clean">
+		<delete dir="${build}"/>
+	</target>
+	
+	<target name="init" depends="clean">
+		<mkdir dir="${build}"/>
+	</target>
+	
+	<target name="resolve" description="--> retrieve dependencies with ivy" depends="init">
+		<ivy:retrieve />
+		<ivy:cachepath pathid="default.classpath" />
+	</target>
+
+	<target name="compile" depends="resolve">
+		<!-- Compile the java code -->
+		<javac srcdir="src" destdir="${build}" debug="true" debuglevel="lines,vars,source" includeantruntime="false">
+			<classpath refid="default.classpath" />
+		</javac>
+	</target>
+	
+  	<target name="jar" depends="compile">
+		<!-- Build the jar file -->
+		<jar basedir="${build}" destfile="${build}/rmripper.jar">
+			<manifest>
+                <attribute name="Main-Class" value="com.jtunes.remoteripper.RemoteRipper"/>
+            </manifest>
+			<zipgroupfileset dir="${lib.dir}">
+				<include name="**/*.jar" />
+			</zipgroupfileset>
+			<fileset file="src/log4j.properties"/>
+			<fileset dir="src" includes="**/*.java"/>
+		</jar>
+  		<delete dir="${lib.dir}"/>
+  		<delete dir="${build}/com"/>
+	</target>
+
+</project>
