@@ -13,13 +13,15 @@
         <dependency org="com.thoughtworks.xstream" name="xstream" rev="1.3.1" conf="* -> master"/>
         <dependency org="org.scannotation" name="scannotation" rev="1.0.3" conf="* -> master"/>
         <dependency org="org.javassist" name="javassist" rev="3.19.0-GA" conf="* -> master"/>
-        <dependency org="com.jtunes" name="jtunesutil" rev="1.69" conf="* -> master"/>
+        <dependency org="com.jtunes" name="jtunesutil" rev="1.80" conf="* -> master"/>
         <dependency org="multicaster" name="multicaster" rev="1.01" conf="* -> default"/>
         <dependency org="org.codehaus.jettison" name="jettison" rev="1.0.1" />
         <dependency org="log4j" name="log4j" rev="1.2.17" conf="* -> master" />
         <dependency org="ollie.utils" name="utils" rev="1.19" conf="* -> master"/>
-        <dependency org="cdutils" name="cdutils" rev="1.02" conf="* -> master"/>
+        <dependency org="cdutils" name="cdutils" rev="1.07" conf="* -> master"/>
         <dependency org="net.java.dev.jna" name="jna" rev="4.1.0" conf="* -> master"/>
         <dependency org="com.googlecode.soundlibs" name="tritonus-share" rev="0.3.7-2" conf="* -> master"/>
+        <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.5" conf="* -> master"/>
+        <dependency org="org.apache.httpcomponents" name="httpcore" rev="4.4.1" conf="* -> master"/>
     </dependencies>
 </ivy-module>

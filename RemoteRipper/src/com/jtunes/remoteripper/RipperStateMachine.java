@@ -1,25 +1,29 @@
 package com.jtunes.remoteripper;
 
 import java.io.File;
+import java.io.IOException;
 
+import javax.sound.sampled.AudioFileFormat.Type;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.AudioFileFormat.Type;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.FileEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
 
-import com.jtunes.util.domain.AudioCd;
-import com.jtunes.util.domain.AudioCdTrack;
 import com.jtunes.util.domain.RipStatus;
 
 import cdutils.domain.RipProgressEvent;
 import cdutils.domain.TOC;
-import cdutils.domain.TOCEntry;
 import cdutils.exception.DiscReadException;
 import cdutils.service.CD;
-import cdutils.service.CDDA;
 import cdutils.service.RipProgressListener;
+import cdutils.service.StubCDDA;
 
 public class RipperStateMachine implements RipProgressListener {
 
@@ -29,15 +33,23 @@ public class RipperStateMachine implements RipProgressListener {
 	private TOC toc;
 	private CD cd;
 	private long startTime;
-	private RipperState currentState;
+	private volatile RipperState currentState = RipperState.READ_DISC;
 	private int trackNo = -1;
 	private String trackName;
 	private volatile boolean ripError;
+	private volatile boolean wait;
 	private File file;
-	private File ripDir; // TODO configure ripDir
-		
+	private File ripDir = new File("C:/music/rip/"); // TODO configure ripDir
+	private Runnable sendStatus;
+	private String systemId;
+	
+	RipperStateMachine(Runnable sendStatus, String systemId) {
+		this.sendStatus = sendStatus;
+		this.systemId = systemId;
+	}
+	
 	public void start(String device) {
-		cd = new CDDA(device);
+		cd = new StubCDDA();
 		sm = this;
 	}
 	
@@ -55,6 +67,10 @@ public class RipperStateMachine implements RipProgressListener {
 		if (currentState == RipperState.WAIT_FOR_START) {
 			trackNo = track;
 			trackName = name;
+		} else if (currentState == RipperState.COMPLETE) {
+			trackNo = track;
+			trackName = name;
+			changeState(RipperState.WAIT_FOR_START);
 		}
 	}
 	
@@ -65,18 +81,16 @@ public class RipperStateMachine implements RipProgressListener {
 	private void makeRipStatus() throws DiscReadException {
 		toc = cd.getTableOfContents();
 		ripStatus = new RipStatus();
-		AudioCd audioCd = new AudioCd();
-		audioCd.setDuration(toc.getDuration());
-		for (TOCEntry ent : toc.entries()) {
-			audioCd.addTrack(new AudioCdTrack(ent.getId(), ent.getDuration()));
-		}
-		ripStatus.setAudioCd(audioCd);
+		toc.setMusicbrainzDiscURL(cd.getMusicBrainzURL());
+		toc.setMusicbrainzDiscId(cd.getMusicBrainzDiscId());
+		toc.setCddbId(cd.getCDDBId());
+		ripStatus.setToc(toc);
 	}
 	
 	private void doRip() throws Exception {
 		AudioInputStream ais = null;
 		try {
-			file = new File(ripDir.getAbsolutePath()+"/"+trackName+".wav");
+			file = new File(ripDir, "/"+trackName+".wav");
 			logger.info("Starting rip on track ["+trackNo+"]");
 			ais = cd.getTrack(trackNo, this);
 			AudioSystem.write(ais, Type.WAVE, file);
@@ -95,10 +109,13 @@ public class RipperStateMachine implements RipProgressListener {
 		return String.format("%02d:%02d", (total/60), (total%60));
 	}
 	
-	private void changeState(RipperState newState) {
+	private synchronized void changeState(RipperState newState) {
 		logger.info("Changing state from ["+currentState.getName()+"] to state ["+newState.getName()+"]");
 		ripStatus.setTimeElapsed(calculateElapsedTime());
 		currentState = newState;
+		ripStatus.setMessage(currentState.name);
+		ripStatus.setState(currentState.toString());
+		sendStatus.run();
 	}
 	
 	private void reset() {
@@ -108,10 +125,26 @@ public class RipperStateMachine implements RipProgressListener {
 					new File(ripDir.getAbsolutePath()+"/"+s).delete();
 				}
 			}
-			ripDir.delete();
 		}
 		trackNo = -1;
 		trackName = null;
+		wait = false;
+		ripError = false;
+	}
+	
+	private void doUpload() throws IOException {
+		HttpClient client = HttpClientBuilder.create().build();
+		HttpPost post = new HttpPost("http://localhost:8888/jTunes/server/upload?systemId="+systemId+"&fileSize="+file.length()+"&fileName="+trackName+".wav");
+
+		HttpEntity entity = new FileEntity(file);
+		
+		post.setEntity(entity);
+		HttpResponse resp = client.execute(post);
+
+		int response = resp.getStatusLine().getStatusCode();
+		if (response != 200) {
+			throw new IOException("Received error ["+response+"] from server.");
+		}
 	}
 	
 	private enum RipperState {
@@ -133,8 +166,8 @@ public class RipperStateMachine implements RipProgressListener {
 			
 			@Override
 			void doAction() {
-				sm.ripStatus.setMessage(getName());
 				if (sm.trackName != null) {
+					sm.wait = false;
 					sm.changeState(RIP_TRACK);
 				}
 			}
@@ -144,7 +177,6 @@ public class RipperStateMachine implements RipProgressListener {
 			@Override
 			void doAction() {
 				try {
-					sm.ripStatus.setMessage(getName());
 					sm.ripStatus.setRipTrack(sm.trackNo);
 					sm.ripStatus.setProgress(0);
 					sm.doRip();
@@ -164,17 +196,26 @@ public class RipperStateMachine implements RipProgressListener {
 			
 			@Override
 			void doAction() {
-				sm.ripStatus.setMessage(getName());
-				
+				try {
+					sm.doUpload();
+					sm.changeState(COMPLETE);
+				} catch (Exception e) {
+					sm.logger.error("An error occurred while uploading track ["+sm.trackNo+"]",e);
+					sm.changeState(ERROR);
+				}
 			}
 		},
 		COMPLETE("Complete") {
 			
 			@Override
 			void doAction() {
-				sm.reset();
-				if (sm.trackNo == sm.toc.entries().size()) {
-					sm.cd.eject();
+				if (!sm.wait) {
+					sm.reset();
+					if (sm.trackNo == sm.toc.entries().size()) {
+						sm.cd.eject();
+						sm.changeState(READ_DISC);
+					}
+					sm.wait = true;
 				}
 			}
 		},
@@ -182,7 +223,6 @@ public class RipperStateMachine implements RipProgressListener {
 			
 			@Override
 			void doAction() {
-				sm.ripStatus.setMessage(getName());
 				sm.cd.eject();
 				sm.reset();
 			}
@@ -204,6 +244,7 @@ public class RipperStateMachine implements RipProgressListener {
 	public void onRipProgressEvent(RipProgressEvent event) {
 		ripStatus.setProgress(event.getProgress());
 		ripStatus.setTimeElapsed(calculateElapsedTime());
+		sendStatus.run();
 	}
 
 	@Override

@@ -3,6 +3,7 @@ package com.jtunes.remoteripper;
 import com.jtunes.util.client.RemoteClient;
 import com.jtunes.util.client.RunnableClient;
 import com.jtunes.util.domain.DeviceStatus;
+import com.jtunes.util.domain.DeviceType;
 
 import oaxws.annotation.WebService;
 import oaxws.annotation.WsMethod;
@@ -10,24 +11,25 @@ import oaxws.annotation.WsParam;
 import serialiser.factory.SerialiserFactory;
 
 @RunnableClient
-@WebService("RemoteRipper")
+@WebService("remoteRipper")
 public class RemoteRipper extends RemoteClient {
 
 	private RipperStateMachine ripper;
 	
 	public RemoteRipper() {
 		super(SerialiserFactory.getJsonSerialiser());
-		ripper = new RipperStateMachine();
+		ripper = new RipperStateMachine(this::sendStatus, name);
 	}
 	
 	@Override
 	protected void loggedIn() {
+		client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
 		ripper.start("");
 	}
 
 	@Override
 	protected void beforeStart() {
-		
+		wsManager.registerWebService(this);
 	}
 
 	@Override
@@ -64,4 +66,5 @@ public class RemoteRipper extends RemoteClient {
 	public void startRip(@WsParam("trackNo") int trackNo, @WsParam("fileName") String fileName) {
 		ripper.ripTrack(trackNo, fileName);
 	}
+
 }
