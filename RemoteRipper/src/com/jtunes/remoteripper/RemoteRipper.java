@@ -18,11 +18,11 @@ public class RemoteRipper extends RemoteClient {
 	
 	public RemoteRipper() {
 		super(SerialiserFactory.getJsonSerialiser());
-		ripper = new RipperStateMachine(this::sendStatus, name);
 	}
 	
 	@Override
 	protected void loggedIn() {
+		ripper = new RipperStateMachine(this::sendStatus, name);
 		client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
 		ripper.start("");
 	}
@@ -65,6 +65,11 @@ public class RemoteRipper extends RemoteClient {
 	@WsMethod("doRip")
 	public void startRip(@WsParam("trackNo") int trackNo, @WsParam("fileName") String fileName) {
 		ripper.ripTrack(trackNo, fileName);
+	}
+	
+	@WsMethod("cancel")
+	public void cancel() {
+		ripper.cancel();
 	}
 
 }
