@@ -74,6 +74,10 @@ public class RipperStateMachine implements RipProgressListener {
 		}
 	}
 	
+	public void cancel() {
+		cd.eject();
+	}
+	
 	public void abort() {
 		ripError = true;
 	}
@@ -126,10 +130,15 @@ public class RipperStateMachine implements RipProgressListener {
 				}
 			}
 		}
+		resetForNextTrack();
+		ripError = false;
+		sendStatus.run();
+	}
+	
+	private void resetForNextTrack() {
 		trackNo = -1;
 		trackName = null;
 		wait = false;
-		ripError = false;
 	}
 	
 	private void doUpload() throws IOException {
@@ -166,7 +175,9 @@ public class RipperStateMachine implements RipProgressListener {
 			
 			@Override
 			void doAction() {
-				if (sm.trackName != null) {
+				if (!sm.cd.isDiscInDrive()) {
+					sm.changeState(ERROR);
+				} else if (sm.trackName != null) {
 					sm.wait = false;
 					sm.changeState(RIP_TRACK);
 				}
@@ -197,8 +208,12 @@ public class RipperStateMachine implements RipProgressListener {
 			@Override
 			void doAction() {
 				try {
-					sm.doUpload();
-					sm.changeState(COMPLETE);
+					if (sm.cd.isDiscInDrive()) {
+						sm.doUpload();
+						sm.changeState(COMPLETE);
+					} else {
+						sm.changeState(ERROR);
+					}
 				} catch (Exception e) {
 					sm.logger.error("An error occurred while uploading track ["+sm.trackNo+"]",e);
 					sm.changeState(ERROR);
@@ -209,13 +224,18 @@ public class RipperStateMachine implements RipProgressListener {
 			
 			@Override
 			void doAction() {
-				if (!sm.wait) {
-					sm.reset();
-					if (sm.trackNo == sm.toc.entries().size()) {
-						sm.cd.eject();
-						sm.changeState(READ_DISC);
+				if (sm.cd.isDiscInDrive()) {
+					if (!sm.wait) {
+						sm.resetForNextTrack();
+						if (sm.trackNo == sm.toc.entries().size()) {
+							sm.reset();
+							sm.cd.eject();
+							sm.changeState(READ_DISC);
+						}
+						sm.wait = true;
 					}
-					sm.wait = true;
+				} else {
+					sm.changeState(ERROR);
 				}
 			}
 		},
@@ -225,6 +245,7 @@ public class RipperStateMachine implements RipProgressListener {
 			void doAction() {
 				sm.cd.eject();
 				sm.reset();
+				sm.changeState(READ_DISC);
 			}
 		};
 		
