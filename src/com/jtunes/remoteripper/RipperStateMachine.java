@@ -22,10 +22,11 @@ import cdutils.domain.RipProgressEvent;
 import cdutils.domain.TOC;
 import cdutils.exception.DiscReadException;
 import cdutils.service.CD;
+import cdutils.service.CDDA;
 import cdutils.service.RipProgressListener;
 import cdutils.service.StubCDDA;
 
-public class RipperStateMachine implements RipProgressListener {
+class RipperStateMachine implements RipProgressListener {
 
 	private static RipperStateMachine sm;
 	private Log logger = LogFactory.getLog(getClass());
@@ -39,7 +40,7 @@ public class RipperStateMachine implements RipProgressListener {
 	private volatile boolean ripError;
 	private volatile boolean wait;
 	private File file;
-	private File ripDir = new File("C:/music/rip/"); // TODO configure ripDir
+	private File ripDir;
 	private Runnable sendStatus;
 	private String systemId;
 	
@@ -48,38 +49,46 @@ public class RipperStateMachine implements RipProgressListener {
 		this.systemId = systemId;
 	}
 	
-	public void start(String device) {
-		cd = new StubCDDA();
+	void start(String device, String ripTmpDir) {
+		ripDir = new File(ripTmpDir);
+		ripDir.mkdirs();
+		if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
+			cd = new StubCDDA();	
+		} else {
+			cd = new CDDA(device);
+		}
 		sm = this;
 	}
-	
-	public RipStatus getStatus() {
+		
+	RipStatus getStatus() {
 		return ripStatus;
 	}
 		
-	public void tick() {
+	void tick() {
 		if (currentState != null) {
 			currentState.doAction();
 		}
 	}
 	
-	public void ripTrack(int track, String name) {
-		if (currentState == RipperState.WAIT_FOR_START) {
+	void ripTrack(int track, String name) {
+		if (currentState == RipperState.WAIT_FOR_START || currentState == RipperState.COMPLETE) {
 			trackNo = track;
 			trackName = name;
-		} else if (currentState == RipperState.COMPLETE) {
-			trackNo = track;
-			trackName = name;
-			changeState(RipperState.WAIT_FOR_START);
+			ripStatus.setRipTrack(trackNo);
+			changeState(RipperState.RIP_TRACK);
 		}
 	}
 	
-	public void cancel() {
-		cd.eject();
+	void startUpload() {
+		if (currentState == RipperState.RIP_TRACK_DONE) {
+			changeState(RipperState.UPLOAD);
+		}
 	}
 	
-	public void abort() {
-		ripError = true;
+	void cancel() {
+		if (cd != null) {
+			cd.eject();
+		}
 	}
 	
 	private void makeRipStatus() throws DiscReadException {
@@ -130,32 +139,31 @@ public class RipperStateMachine implements RipProgressListener {
 				}
 			}
 		}
-		resetForNextTrack();
 		ripError = false;
-		sendStatus.run();
+		resetForNextTrack();		
 	}
 	
 	private void resetForNextTrack() {
+		ripStatus.setRipTrack(-1);
+		ripStatus.setProgress(0);
 		trackNo = -1;
 		trackName = null;
 		wait = false;
+		sendStatus.run();
 	}
 	
 	private void doUpload() throws IOException {
 		HttpClient client = HttpClientBuilder.create().build();
 		HttpPost post = new HttpPost("http://localhost:8888/jTunes/server/upload?systemId="+systemId+"&fileSize="+file.length()+"&fileName="+trackName+".wav");
-
 		HttpEntity entity = new FileEntity(file);
-		
 		post.setEntity(entity);
 		HttpResponse resp = client.execute(post);
-
 		int response = resp.getStatusLine().getStatusCode();
 		if (response != 200) {
 			throw new IOException("Received error ["+response+"] from server.");
 		}
 	}
-	
+		
 	private enum RipperState {
 		
 		READ_DISC("Reading disc") {
@@ -177,9 +185,6 @@ public class RipperStateMachine implements RipProgressListener {
 			void doAction() {
 				if (!sm.cd.isDiscInDrive()) {
 					sm.changeState(ERROR);
-				} else if (sm.trackName != null) {
-					sm.wait = false;
-					sm.changeState(RIP_TRACK);
 				}
 			}
 		},
@@ -188,19 +193,24 @@ public class RipperStateMachine implements RipProgressListener {
 			@Override
 			void doAction() {
 				try {
-					sm.ripStatus.setRipTrack(sm.trackNo);
-					sm.ripStatus.setProgress(0);
 					sm.doRip();
 					if (sm.ripError) {
 						sm.changeState(ERROR);
 					} else {
-						sm.changeState(UPLOAD);
+						sm.changeState(RIP_TRACK_DONE);
 					}
 				} catch (Exception e) {
 					sm.logger.error("An error occurred while ripping track ["+sm.trackNo+"]",e);
 					sm.changeState(ERROR);
 				} 
-				
+			}
+		},
+		RIP_TRACK_DONE("Rip done") {
+			@Override
+			void doAction() {
+				if (!sm.cd.isDiscInDrive()) {
+					sm.changeState(ERROR);
+				}
 			}
 		},
 		UPLOAD("Upload") {

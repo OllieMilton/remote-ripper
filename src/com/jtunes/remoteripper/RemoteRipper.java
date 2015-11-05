@@ -2,6 +2,9 @@ package com.jtunes.remoteripper;
 
 import com.jtunes.util.client.RemoteClient;
 import com.jtunes.util.client.RunnableClient;
+import com.jtunes.util.domain.Device;
+import com.jtunes.util.domain.DeviceConfig;
+import com.jtunes.util.domain.DeviceConfigParam;
 import com.jtunes.util.domain.DeviceStatus;
 import com.jtunes.util.domain.DeviceType;
 
@@ -23,8 +26,20 @@ public class RemoteRipper extends RemoteClient {
 	@Override
 	protected void loggedIn() {
 		ripper = new RipperStateMachine(this::sendStatus, name);
-		client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
-		ripper.start("");
+		Device d = client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
+		if (d != null) {
+			DeviceConfig cdrom = d.getConfigMap().get(DeviceConfigParam.CDROM_DRIVE);
+			DeviceConfig tmpDir = d.getConfigMap().get(DeviceConfigParam.RIP_TMP_DIRECTORY);
+			if (cdrom != null && tmpDir != null) {
+				ripper.start(cdrom.getValue(), tmpDir.getValue());
+			} else {
+				logger.error("One or more config parameters missing.");
+				fatalError();
+			}
+		} else {
+			logger.error("Could not get device.");
+			fatalError();
+		}
 	}
 
 	@Override
@@ -34,12 +49,12 @@ public class RemoteRipper extends RemoteClient {
 
 	@Override
 	protected void onFatalError() {
-		ripper.abort();
+		ripper.cancel();
 	}
 
 	@Override
 	protected void beforeShutdown() {
-		
+		ripper.cancel();
 	}
 
 	@Override
@@ -70,6 +85,11 @@ public class RemoteRipper extends RemoteClient {
 	@WsMethod("cancel")
 	public void cancel() {
 		ripper.cancel();
+	}
+	
+	@WsMethod("doUpload")
+	public void startUpload(String state) {
+		ripper.startUpload();
 	}
 
 }
