@@ -2,7 +2,7 @@
     <info organisation="com.jtunes" module="remoteripper"/>
     <dependencies>
         <dependency org="commons-logging" name="commons-logging" rev="1.2" conf="* -> default"/>
-        <dependency org="oax-ws" name="oax-ws" rev="1.18" conf="* -> master"/>
+        <dependency org="oax-ws" name="oax-ws" rev="1.19" conf="* -> master"/>
         <dependency org="org.eclipse.jetty" name="jetty-io" rev="9.2.10.v20150310" conf="* -> master"/>
         <dependency org="org.eclipse.jetty" name="jetty-util" rev="9.2.10.v20150310" conf="* -> master"/>
         <dependency org="org.eclipse.jetty.websocket" name="websocket-api" rev="9.2.10.v20150310" conf="* -> master"/>
