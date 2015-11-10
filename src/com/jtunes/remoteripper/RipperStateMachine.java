@@ -7,6 +7,8 @@ import javax.sound.sampled.AudioFileFormat.Type;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
+import ollie.utils.state.StateHolder;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpEntity;
@@ -34,7 +36,6 @@ class RipperStateMachine implements RipProgressListener {
 	private TOC toc;
 	private CD cd;
 	private long startTime;
-	private volatile RipperState currentState = RipperState.READ_DISC;
 	private int trackNo = -1;
 	private String trackName;
 	private volatile boolean ripError;
@@ -43,6 +44,7 @@ class RipperStateMachine implements RipProgressListener {
 	private File ripDir;
 	private Runnable sendStatus;
 	private String systemId;
+	private StateHolder<RipperState> currentState;
 	private String sessionId;
 	private String ripUploadAddress;
 	
@@ -50,6 +52,7 @@ class RipperStateMachine implements RipProgressListener {
 		this.sendStatus = sendStatus;
 		this.sessionId = sessionId;
 		this.systemId = systemId;
+		currentState = new StateHolder<RipperState>(RipperState.READ_DISC);
 	}
 	
 	void start(String device, String ripTmpDir, String ripUploadAddress) {
@@ -69,13 +72,11 @@ class RipperStateMachine implements RipProgressListener {
 	}
 		
 	void tick() {
-		if (currentState != null) {
-			currentState.doAction();
-		}
+		currentState.get().doAction();
 	}
 	
 	void ripTrack(int track, String name) {
-		if (currentState == RipperState.WAIT_FOR_START || currentState == RipperState.COMPLETE) {
+		if (currentState.get() == RipperState.WAIT_FOR_START || currentState.get() == RipperState.COMPLETE) {
 			trackNo = track;
 			trackName = name;
 			ripStatus.setRipTrack(trackNo);
@@ -84,7 +85,7 @@ class RipperStateMachine implements RipProgressListener {
 	}
 	
 	void startUpload() {
-		if (currentState == RipperState.RIP_TRACK_DONE) {
+		if (currentState.get() == RipperState.RIP_TRACK_DONE) {
 			changeState(RipperState.UPLOAD);
 		}
 	}
@@ -92,6 +93,12 @@ class RipperStateMachine implements RipProgressListener {
 	void cancel() {
 		if (cd != null) {
 			cd.eject();
+		}
+	}
+	
+	void finalise() {
+		if (currentState.get() == RipperState.COMPLETE) {
+			changeState(RipperState.FINALISE);
 		}
 	}
 	
@@ -127,11 +134,11 @@ class RipperStateMachine implements RipProgressListener {
 	}
 	
 	private synchronized void changeState(RipperState newState) {
-		logger.info("Changing state from ["+currentState.getName()+"] to state ["+newState.getName()+"]");
+		logger.info("Changing state from ["+currentState.get().getName()+"] to state ["+newState.getName()+"]");
 		ripStatus.setTimeElapsed(calculateElapsedTime());
-		currentState = newState;
-		ripStatus.setMessage(currentState.name);
-		ripStatus.setState(currentState.toString());
+		currentState.transition(newState);
+		ripStatus.setMessage(currentState.get().name);
+		ripStatus.setState(currentState.get().toString());
 		sendStatus.run();
 	}
 	
@@ -144,6 +151,8 @@ class RipperStateMachine implements RipProgressListener {
 			}
 		}
 		ripError = false;
+		ripStatus.setToc(null);
+		ripStatus.setTimeElapsed(null);
 		resetForNextTrack();		
 	}
 	
@@ -241,13 +250,19 @@ class RipperStateMachine implements RipProgressListener {
 				if (sm.cd.isDiscInDrive()) {
 					if (!sm.wait) {
 						sm.resetForNextTrack();
-						if (sm.trackNo == sm.toc.entries().size()) {
-							sm.reset();
-							sm.cd.eject();
-							sm.changeState(READ_DISC);
-						}
 						sm.wait = true;
 					}
+				} else {
+					sm.changeState(ERROR);
+				}
+			}
+		},
+		FINALISE("Finalise") {
+			@Override
+			void doAction() {
+				if (sm.cd.eject()) {
+					sm.reset();
+					sm.changeState(READ_DISC);
 				} else {
 					sm.changeState(ERROR);
 				}
