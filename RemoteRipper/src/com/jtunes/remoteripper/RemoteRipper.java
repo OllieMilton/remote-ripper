@@ -12,6 +12,7 @@ import com.jtunes.util.domain.DeviceType;
 import oaxws.annotation.WebService;
 import oaxws.annotation.WsMethod;
 import oaxws.annotation.WsParam;
+import oaxws.domain.WsSession;
 import serialiser.factory.SerialiserFactory;
 
 @RunnableClient
@@ -25,8 +26,8 @@ public class RemoteRipper extends RemoteClient {
 	}
 	
 	@Override
-	protected void loggedIn() {
-		ripper = new RipperStateMachine(this::sendStatus, name);
+	protected void loggedIn(WsSession session) {
+		ripper = new RipperStateMachine(this::sendStatus, session.getSessionId(), name);
 		Device d = client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
 		if (d != null) {
 			String ripUploadAddress = getAddress(JTunesAddress.RIP_UPLOAD_ADDRESS);
