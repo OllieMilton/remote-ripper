@@ -43,13 +43,14 @@ class RipperStateMachine implements RipProgressListener {
 	private File ripDir;
 	private Runnable sendStatus;
 	private String systemId;
+	private String ripUploadAddress;
 	
 	RipperStateMachine(Runnable sendStatus, String systemId) {
 		this.sendStatus = sendStatus;
 		this.systemId = systemId;
 	}
 	
-	void start(String device, String ripTmpDir) {
+	void start(String device, String ripTmpDir, String ripUploadAddress) {
 		ripDir = new File(ripTmpDir);
 		ripDir.mkdirs();
 		if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
@@ -57,6 +58,7 @@ class RipperStateMachine implements RipProgressListener {
 		} else {
 			cd = new CDDA(device);
 		}
+		this.ripUploadAddress = ripUploadAddress;
 		sm = this;
 	}
 		
@@ -154,7 +156,7 @@ class RipperStateMachine implements RipProgressListener {
 	
 	private void doUpload() throws IOException {
 		HttpClient client = HttpClientBuilder.create().build();
-		HttpPost post = new HttpPost("http://localhost:8888/jTunes/server/upload?systemId="+systemId+"&fileSize="+file.length()+"&fileName="+trackName+".wav");
+		HttpPost post = new HttpPost(ripUploadAddress+"?systemId="+systemId+"&fileSize="+file.length()+"&fileName="+trackName+".wav");
 		HttpEntity entity = new FileEntity(file);
 		post.setEntity(entity);
 		HttpResponse resp = client.execute(post);
