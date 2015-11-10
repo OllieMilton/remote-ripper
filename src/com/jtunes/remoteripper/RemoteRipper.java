@@ -1,5 +1,6 @@
 package com.jtunes.remoteripper;
 
+import com.jtunes.util.client.JTunesAddress;
 import com.jtunes.util.client.RemoteClient;
 import com.jtunes.util.client.RunnableClient;
 import com.jtunes.util.domain.Device;
@@ -28,10 +29,11 @@ public class RemoteRipper extends RemoteClient {
 		ripper = new RipperStateMachine(this::sendStatus, name);
 		Device d = client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
 		if (d != null) {
+			String ripUploadAddress = getAddress(JTunesAddress.RIP_UPLOAD_ADDRESS);
 			DeviceConfig cdrom = d.getConfigMap().get(DeviceConfigParam.CDROM_DRIVE);
 			DeviceConfig tmpDir = d.getConfigMap().get(DeviceConfigParam.RIP_TMP_DIRECTORY);
-			if (cdrom != null && tmpDir != null) {
-				ripper.start(cdrom.getValue(), tmpDir.getValue());
+			if (cdrom != null && tmpDir != null && ripUploadAddress != null) {
+				ripper.start(cdrom.getValue(), tmpDir.getValue(), ripUploadAddress);
 			} else {
 				logger.error("One or more config parameters missing.");
 				fatalError();
