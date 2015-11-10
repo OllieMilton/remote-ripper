@@ -95,4 +95,8 @@ public class RemoteRipper extends RemoteClient {
 		ripper.startUpload();
 	}
 
+	@WsMethod("finalise")
+	public void finalise() {
+		ripper.finalise();
+	}
 }
