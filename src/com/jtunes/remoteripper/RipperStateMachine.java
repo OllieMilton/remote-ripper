@@ -117,7 +117,7 @@ class RipperStateMachine implements RipProgressListener {
 			file = new File(ripDir, "/"+trackName+".wav");
 			logger.info("Starting rip on track ["+trackNo+"]");
 			ais = cd.getTrack(trackNo, this);
-			AudioSystem.write(ais, Type.WAVE, file);
+			AudioSystem.write(ais, Type.WAVE, file);			
 		} catch (Exception e) {
 			cd.cancel();
 			throw e;
