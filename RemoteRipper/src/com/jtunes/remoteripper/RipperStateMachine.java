@@ -167,7 +167,7 @@ class RipperStateMachine implements RipProgressListener {
 	
 	private void doUpload() throws IOException {
 		HttpClient client = HttpClientBuilder.create().build();
-		HttpPost post = new HttpPost(ripUploadAddress+"?sessionId="+sessionId+"systemId="+systemId+"&fileSize="+file.length()+"&fileName="+trackName+".wav");
+		HttpPost post = new HttpPost(ripUploadAddress+"?sessionId="+sessionId+"&systemId="+systemId+"&fileSize="+file.length()+"&fileName="+trackName+".wav");
 		HttpEntity entity = new FileEntity(file);
 		post.setEntity(entity);
 		HttpResponse resp = client.execute(post);
