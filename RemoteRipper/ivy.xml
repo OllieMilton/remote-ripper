@@ -14,7 +14,7 @@
         <dependency org="org.scannotation" name="scannotation" rev="1.0.3" conf="* -> master"/>
         <dependency org="org.javassist" name="javassist" rev="3.19.0-GA" conf="* -> master"/>
         <dependency org="com.jtunes" name="jtunesutil" rev="1.116" conf="* -> master"/>
-        <dependency org="multicaster" name="multicaster" rev="1.02" conf="* -> default"/>
+        <dependency org="multicaster" name="multicaster" rev="1.03" conf="* -> default"/>
         <dependency org="org.codehaus.jettison" name="jettison" rev="1.0.1" />
         <dependency org="log4j" name="log4j" rev="1.2.17" conf="* -> master" />
         <dependency org="ollie.utils" name="utils" rev="1.21" conf="* -> master"/>
