@@ -3,7 +3,6 @@ package com.jtunes.remoteripper;
 import com.jtunes.util.client.JTunesAddress;
 import com.jtunes.util.client.RemoteClient;
 import com.jtunes.util.client.RunnableClient;
-import com.jtunes.util.domain.Device;
 import com.jtunes.util.domain.DeviceConfig;
 import com.jtunes.util.domain.DeviceConfigParam;
 import com.jtunes.util.domain.DeviceStatus;
@@ -30,11 +29,11 @@ public class RemoteRipper extends RemoteClient {
 	@Override
 	protected void loggedIn(WsSession session) {
 		ripper = new RipperStateMachine(super::sendStatus, session.getSessionId(), name);
-		Device d = registerRemoteDevice(DeviceType.REMOTE_RIPPER);
-		if (d != null) {
+		registerRemoteDevice(DeviceType.REMOTE_RIPPER);
+		if (device != null) {
 			String ripUploadAddress = getAddress(JTunesAddress.RIP_UPLOAD_ADDRESS);
-			DeviceConfig cdrom = d.getConfigMap().get(DeviceConfigParam.CDROM_DRIVE);
-			DeviceConfig tmpDir = d.getConfigMap().get(DeviceConfigParam.RIP_TMP_DIRECTORY);
+			DeviceConfig cdrom = device.getConfigMap().get(DeviceConfigParam.CDROM_DRIVE);
+			DeviceConfig tmpDir = device.getConfigMap().get(DeviceConfigParam.RIP_TMP_DIRECTORY);
 			if (cdrom != null && tmpDir != null && ripUploadAddress != null) {
 				ripper.start(cdrom.getValue(), tmpDir.getValue(), ripUploadAddress);
 			} else {
