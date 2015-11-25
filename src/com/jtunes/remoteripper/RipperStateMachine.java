@@ -7,8 +7,6 @@ import javax.sound.sampled.AudioFileFormat.Type;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
-import ollie.utils.state.StateHolder;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpEntity;
@@ -27,7 +25,10 @@ import cdutils.service.CD;
 import cdutils.service.CDDA;
 import cdutils.service.RipProgressListener;
 import cdutils.service.StubCDDA;
+import ollie.utils.logging.LogProvider;
+import ollie.utils.state.StateHolder;
 
+@LogProvider
 class RipperStateMachine implements RipProgressListener {
 
 	private static RipperStateMachine sm;
