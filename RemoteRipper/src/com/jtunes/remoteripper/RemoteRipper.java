@@ -27,7 +27,7 @@ public class RemoteRipper extends RemoteClient {
 	
 	@Override
 	protected void loggedIn(WsSession session) {
-		ripper = new RipperStateMachine(this::sendStatus, session.getSessionId(), name);
+		ripper = new RipperStateMachine(super::sendStatus, session.getSessionId(), name);
 		Device d = client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
 		if (d != null) {
 			String ripUploadAddress = getAddress(JTunesAddress.RIP_UPLOAD_ADDRESS);

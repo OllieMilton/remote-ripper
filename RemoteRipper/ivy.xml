@@ -18,7 +18,7 @@
         <dependency org="org.codehaus.jettison" name="jettison" rev="1.0.1" />
         <dependency org="log4j" name="log4j" rev="1.2.17" conf="* -> master" />
         <dependency org="ollie.utils" name="utils" rev="1.21" conf="* -> master"/>
-        <dependency org="cdutils" name="cdutils" rev="1.09" conf="* -> master"/>
+        <dependency org="cdutils" name="cdutils" rev="1.11" conf="* -> master"/>
         <dependency org="net.java.dev.jna" name="jna" rev="4.1.0" conf="* -> master"/>
         <dependency org="com.googlecode.soundlibs" name="tritonus-share" rev="0.3.7-2" conf="* -> master"/>
         <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.5" conf="* -> master"/>
