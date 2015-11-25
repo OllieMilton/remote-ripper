@@ -13,8 +13,10 @@ import oaxws.annotation.WebService;
 import oaxws.annotation.WsMethod;
 import oaxws.annotation.WsParam;
 import oaxws.domain.WsSession;
+import ollie.utils.logging.LogProvider;
 import serialiser.factory.SerialiserFactory;
 
+@LogProvider
 @RunnableClient
 @WebService("remoteRipper")
 public class RemoteRipper extends RemoteClient {
@@ -28,7 +30,7 @@ public class RemoteRipper extends RemoteClient {
 	@Override
 	protected void loggedIn(WsSession session) {
 		ripper = new RipperStateMachine(super::sendStatus, session.getSessionId(), name);
-		Device d = client.registerRemoteDevice(name, DeviceType.REMOTE_RIPPER);
+		Device d = registerRemoteDevice(DeviceType.REMOTE_RIPPER);
 		if (d != null) {
 			String ripUploadAddress = getAddress(JTunesAddress.RIP_UPLOAD_ADDRESS);
 			DeviceConfig cdrom = d.getConfigMap().get(DeviceConfigParam.CDROM_DRIVE);
