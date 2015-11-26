@@ -1,7 +1,7 @@
 package com.jtunes.remoteripper;
 
 import com.jtunes.util.client.JTunesAddress;
-import com.jtunes.util.client.RemoteClient;
+import com.jtunes.util.client.RemoteDeviceClient;
 import com.jtunes.util.client.RunnableClient;
 import com.jtunes.util.domain.DeviceConfig;
 import com.jtunes.util.domain.DeviceConfigParam;
@@ -18,18 +18,18 @@ import serialiser.factory.SerialiserFactory;
 @LogProvider
 @RunnableClient
 @WebService("remoteRipper")
-public class RemoteRipper extends RemoteClient {
+public class RemoteRipper extends RemoteDeviceClient {
 
 	private RipperStateMachine ripper;
 	
 	public RemoteRipper() {
-		super(SerialiserFactory.getJsonSerialiser());
+		super(SerialiserFactory.getJsonSerialiser(), DeviceType.REMOTE_RIPPER);
 	}
 	
 	@Override
 	protected void loggedIn(WsSession session) {
 		ripper = new RipperStateMachine(super::sendStatus, session.getSessionId(), name);
-		registerRemoteDevice(DeviceType.REMOTE_RIPPER);
+		registerRemoteDevice();
 		if (device != null) {
 			String ripUploadAddress = getAddress(JTunesAddress.RIP_UPLOAD_ADDRESS);
 			DeviceConfig cdrom = device.getConfigMap().get(DeviceConfigParam.CDROM_DRIVE);
