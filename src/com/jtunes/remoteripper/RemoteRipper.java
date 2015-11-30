@@ -12,10 +12,8 @@ import oaxws.annotation.WebService;
 import oaxws.annotation.WsMethod;
 import oaxws.annotation.WsParam;
 import oaxws.domain.WsSession;
-import ollie.utils.logging.LogProvider;
 import serialiser.factory.SerialiserFactory;
 
-@LogProvider
 @RunnableClient
 @WebService("remoteRipper")
 public class RemoteRipper extends RemoteDeviceClient {

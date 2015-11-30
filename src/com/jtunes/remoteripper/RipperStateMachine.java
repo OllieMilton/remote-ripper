@@ -25,10 +25,8 @@ import cdutils.service.CD;
 import cdutils.service.CDDA;
 import cdutils.service.RipProgressListener;
 import cdutils.service.StubCDDA;
-import ollie.utils.logging.LogProvider;
 import ollie.utils.state.StateHolder;
 
-@LogProvider
 class RipperStateMachine implements RipProgressListener {
 
 	private static RipperStateMachine sm;
