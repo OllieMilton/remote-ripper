@@ -11,11 +11,12 @@ import com.jtunes.util.domain.DeviceType;
 import oaxws.annotation.WebService;
 import oaxws.annotation.WsMethod;
 import oaxws.annotation.WsParam;
+import oaxws.domain.AccessLevel;
 import oaxws.domain.WsSession;
 import serialiser.factory.SerialiserFactory;
 
 @RunnableClient
-@WebService("remoteRipper")
+@WebService(value="remoteRipper", accessLevel=AccessLevel.TWO)
 public class RemoteRipper extends RemoteDeviceClient {
 
 	private RipperStateMachine ripper;
